@@ -165,9 +165,11 @@
   }
 
   function formatClock(ts) {
-    return new Date(ts).toLocaleTimeString([], {
+    return new Date(ts).toLocaleTimeString("en-IN", {
       hour: "numeric",
       minute: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Kolkata",
     });
   }
 
@@ -335,7 +337,7 @@
       const onBreak = activeBreak();
       const over = remaining <= 0;
 
-      els.leaveAt.textContent = `Leave by ${formatClock(leaveAt)}`;
+      els.leaveAt.textContent = `Leave by ${formatClock(leaveAt)} IST`;
       els.timeLeft.textContent = over ? "00:00:00" : formatHMS(remaining);
       els.timeLeft.classList.toggle("critical", over);
       els.dayProgress.style.width = `${Math.min(100, (elapsed / shiftMs()) * 100)}%`;
