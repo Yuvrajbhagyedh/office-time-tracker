@@ -377,6 +377,58 @@ body {
   border-color: rgba(212, 160, 23, 0.5);
 }
 
+.settings-block {
+  width: 100%;
+  text-align: left;
+  margin-bottom: 1.35rem;
+  padding-bottom: 1.15rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.settings-title {
+  margin: 0 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.settings-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.setting-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+
+.setting-field input {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  padding: 0.85rem 1rem;
+}
+
+.setting-field input:focus {
+  outline: none;
+  border-color: rgba(212, 160, 23, 0.5);
+}
+
+.settings-hint {
+  margin: 0.7rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
 .legend {
   display: flex;
   gap: 1.25rem;

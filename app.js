@@ -1,6 +1,6 @@
 (() => {
-  const SHIFT_MS = 9 * 60 * 60 * 1000;
-  const BREAK_ALLOWANCE_MS = 60 * 60 * 1000;
+  const DEFAULT_SHIFT_HOURS = 9;
+  const DEFAULT_BREAK_MINS = 60;
   const WARN_5_MS = 5 * 60 * 1000;
   const WARN_1_MS = 1 * 60 * 1000;
   const STORAGE_KEY = "shift-desk-v3";
@@ -60,6 +60,8 @@
     doneDetail: document.getElementById("doneDetail"),
     greetLine: document.getElementById("greetLine"),
     nameInput: document.getElementById("nameInput"),
+    shiftHoursInput: document.getElementById("shiftHoursInput"),
+    breakMinsInput: document.getElementById("breakMinsInput"),
     calTitle: document.getElementById("calTitle"),
     calGrid: document.getElementById("calGrid"),
     prevMonthBtn: document.getElementById("prevMonthBtn"),
@@ -80,6 +82,8 @@
    *    alertAt1: boolean
    *  }>,
    *  name: string,
+   *  shiftHours: number,
+   *  breakMins: number,
    *  attendance: Record<string, true>,
    *  trackingSince: string | null,
    * }} */
@@ -89,6 +93,8 @@
     clockOutAt: null,
     breaks: [],
     name: "",
+    shiftHours: DEFAULT_SHIFT_HOURS,
+    breakMins: DEFAULT_BREAK_MINS,
     attendance: {},
     trackingSince: null,
   };
@@ -97,6 +103,8 @@
   if (!state.attendance) state.attendance = {};
   if (state.name == null) state.name = "";
   if (state.trackingSince === undefined) state.trackingSince = null;
+  if (!Number.isFinite(state.shiftHours)) state.shiftHours = DEFAULT_SHIFT_HOURS;
+  if (!Number.isFinite(state.breakMins)) state.breakMins = DEFAULT_BREAK_MINS;
 
   let tickTimer = null;
   let vibrateTimer = null;
@@ -117,6 +125,20 @@
 
   function saveState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function shiftMs() {
+    return state.shiftHours * 60 * 60 * 1000;
+  }
+
+  function breakAllowanceMs() {
+    return state.breakMins * 60 * 1000;
+  }
+
+  function formatHoursLabel(hours) {
+    const n = Number(hours);
+    if (!Number.isFinite(n)) return "9-hour";
+    return Number.isInteger(n) ? `${n}-hour` : `${n}-hour`;
   }
 
   function pad(n) {
@@ -239,9 +261,10 @@
   }
 
   function updateGreeting() {
+    const label = formatHoursLabel(state.shiftHours);
     els.greetLine.textContent = state.name
-      ? `Hey ${state.name} · 9-hour day`
-      : "Your 9-hour day";
+      ? `Hey ${state.name} · ${label} day`
+      : `Your ${label} day`;
   }
 
   function renderCalendar() {
@@ -303,11 +326,11 @@
     const now = Date.now();
 
     if (state.status === "active" && state.clockInAt) {
-      const leaveAt = state.clockInAt + SHIFT_MS;
+      const leaveAt = state.clockInAt + shiftMs();
       const remaining = leaveAt - now;
       const elapsed = now - state.clockInAt;
       const usedBreak = breakUsedMs(now);
-      const breakLeft = BREAK_ALLOWANCE_MS - usedBreak;
+      const breakLeft = breakAllowanceMs() - usedBreak;
       const worked = Math.max(0, elapsed - usedBreak);
       const onBreak = activeBreak();
       const over = remaining <= 0;
@@ -315,7 +338,7 @@
       els.leaveAt.textContent = `Leave by ${formatClock(leaveAt)}`;
       els.timeLeft.textContent = over ? "00:00:00" : formatHMS(remaining);
       els.timeLeft.classList.toggle("critical", over);
-      els.dayProgress.style.width = `${Math.min(100, (elapsed / SHIFT_MS) * 100)}%`;
+      els.dayProgress.style.width = `${Math.min(100, (elapsed / shiftMs()) * 100)}%`;
 
       const breakLeftLabel =
         breakLeft >= 0
@@ -464,10 +487,36 @@
   });
 
   els.nameInput.value = state.name || "";
+  els.shiftHoursInput.value = String(state.shiftHours);
+  els.breakMinsInput.value = String(state.breakMins);
+
   els.nameInput.addEventListener("input", () => {
     state.name = els.nameInput.value.trim();
     saveState();
     updateGreeting();
+  });
+
+  function clamp(n, min, max) {
+    return Math.min(max, Math.max(min, n));
+  }
+
+  els.shiftHoursInput.addEventListener("change", () => {
+    const raw = Number(els.shiftHoursInput.value);
+    const hours = Number.isFinite(raw) ? clamp(raw, 1, 16) : DEFAULT_SHIFT_HOURS;
+    state.shiftHours = hours;
+    els.shiftHoursInput.value = String(hours);
+    saveState();
+    updateGreeting();
+    render();
+  });
+
+  els.breakMinsInput.addEventListener("change", () => {
+    const raw = Number(els.breakMinsInput.value);
+    const mins = Number.isFinite(raw) ? clamp(Math.round(raw), 0, 240) : DEFAULT_BREAK_MINS;
+    state.breakMins = mins;
+    els.breakMinsInput.value = String(mins);
+    saveState();
+    render();
   });
 
   els.prevMonthBtn.addEventListener("click", () => {
