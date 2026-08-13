@@ -4,7 +4,7 @@
   "description": "Track your 9-hour office shift and flexible break chunks.",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#0b1412",
-  "theme_color": "#0f1c1a",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "icons": []
 }

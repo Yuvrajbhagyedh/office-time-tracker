@@ -2,64 +2,103 @@
   const SHIFT_MS = 9 * 60 * 60 * 1000;
   const BREAK_ALLOWANCE_MS = 60 * 60 * 1000;
   const WARN_MS = 5 * 60 * 1000;
-  const STORAGE_KEY = "shift-desk-v2";
+  const STORAGE_KEY = "shift-desk-v3";
+
+  const MONTHS = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+
+  const SHIP_SVG = `<svg viewBox="0 0 64 36" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M8 22 L56 22 L48 32 H16 Z" fill="#6b4a32"/>
+    <path d="M22 22 V10 H26 V22 Z" fill="#c9b08a"/>
+    <path d="M26 11 L40 16 L26 18 Z" fill="#d9c4a0"/>
+    <circle cx="18" cy="26" r="1.4" fill="#1b3344" opacity=".5"/>
+    <circle cx="30" cy="27" r="1.2" fill="#1b3344" opacity=".45"/>
+    <circle cx="42" cy="26" r="1.3" fill="#1b3344" opacity=".5"/>
+  </svg>`;
 
   const els = {
+    shiftPage: document.getElementById("shiftPage"),
+    profilePage: document.getElementById("profilePage"),
+    tabShift: document.getElementById("tabShift"),
+    tabProfile: document.getElementById("tabProfile"),
     idleView: document.getElementById("idleView"),
     activeView: document.getElementById("activeView"),
     doneView: document.getElementById("doneView"),
     clockInBtn: document.getElementById("clockInBtn"),
     clockOutBtn: document.getElementById("clockOutBtn"),
     newDayBtn: document.getElementById("newDayBtn"),
-    breakPicker: document.getElementById("breakPicker"),
-    durationRow: document.getElementById("durationRow"),
-    customMins: document.getElementById("customMins"),
-    customBreakBtn: document.getElementById("customBreakBtn"),
-    breakRunningActions: document.getElementById("breakRunningActions"),
+    openBreakBtn: document.getElementById("openBreakBtn"),
+    onBreakBox: document.getElementById("onBreakBox"),
     endBreakBtn: document.getElementById("endBreakBtn"),
-    testAlertBtn: document.getElementById("testAlertBtn"),
+    breakSheet: document.getElementById("breakSheet"),
+    cancelBreakBtn: document.getElementById("cancelBreakBtn"),
     dismissAlertBtn: document.getElementById("dismissAlertBtn"),
     alertOverlay: document.getElementById("alertOverlay"),
-    alertBody: document.getElementById("alertBody"),
     statusPill: document.getElementById("statusPill"),
-    clockedInAt: document.getElementById("clockedInAt"),
     timeLeft: document.getElementById("timeLeft"),
     leaveAt: document.getElementById("leaveAt"),
     dayProgress: document.getElementById("dayProgress"),
-    workedTime: document.getElementById("workedTime"),
-    breakUsed: document.getElementById("breakUsed"),
-    breakLeft: document.getElementById("breakLeft"),
+    summaryLine: document.getElementById("summaryLine"),
     breakLive: document.getElementById("breakLive"),
-    breakList: document.getElementById("breakList"),
-    emptyBreaks: document.getElementById("emptyBreaks"),
     doneSummary: document.getElementById("doneSummary"),
     doneDetail: document.getElementById("doneDetail"),
+    greetLine: document.getElementById("greetLine"),
+    nameInput: document.getElementById("nameInput"),
+    calTitle: document.getElementById("calTitle"),
+    calGrid: document.getElementById("calGrid"),
+    prevMonthBtn: document.getElementById("prevMonthBtn"),
+    nextMonthBtn: document.getElementById("nextMonthBtn"),
   };
+
+  const nowInit = new Date();
 
   /** @type {{
    *  status: 'idle' | 'active' | 'done',
    *  clockInAt: number | null,
    *  clockOutAt: number | null,
-   *  breaks: Array<{
-   *    start: number,
-   *    end: number | null,
-   *    plannedMs: number,
-   *    alertFired: boolean
-   *  }>,
+   *  breaks: Array<{ start: number, end: number | null, plannedMs: number, alertFired: boolean }>,
+   *  name: string,
+   *  attendance: Record<string, true>,
+   *  trackingSince: string | null,
    * }} */
   let state = loadState() || {
     status: "idle",
     clockInAt: null,
     clockOutAt: null,
     breaks: [],
+    name: "",
+    attendance: {},
+    trackingSince: null,
   };
 
+  // migrate older saves
+  if (!state.attendance) state.attendance = {};
+  if (state.name == null) state.name = "";
+  if (state.trackingSince === undefined) state.trackingSince = null;
+
   let tickTimer = null;
+  let viewYear = nowInit.getFullYear();
+  let viewMonth = nowInit.getMonth();
 
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : null;
+      if (raw) return JSON.parse(raw);
+      // soft-migrate from v2
+      const old = localStorage.getItem("shift-desk-v2");
+      return old ? { ...JSON.parse(old), name: "", attendance: {}, trackingSince: null } : null;
     } catch {
       return null;
     }
@@ -71,6 +110,10 @@
 
   function pad(n) {
     return String(n).padStart(2, "0");
+  }
+
+  function dateKey(d) {
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
 
   function formatHMS(ms) {
@@ -110,76 +153,105 @@
     return b.plannedMs - (now - b.start);
   }
 
+  function markPresent(ts = Date.now()) {
+    const key = dateKey(new Date(ts));
+    state.attendance[key] = true;
+    if (!state.trackingSince) state.trackingSince = key;
+  }
+
   function vibrateAlert() {
     if (!navigator.vibrate) return;
     navigator.vibrate([300, 150, 300, 150, 300, 150, 450]);
   }
 
-  function fireBreakAlert({ force = false, breakItem = null } = {}) {
-    if (!force) {
-      if (!breakItem || breakItem.alertFired) return;
-      breakItem.alertFired = true;
-      saveState();
-    }
-
-    els.alertBody.textContent =
-      "Go now — wrap this break and get back.";
+  function fireBreakAlert(breakItem) {
+    if (!breakItem || breakItem.alertFired) return;
+    breakItem.alertFired = true;
+    saveState();
     els.alertOverlay.classList.remove("hidden");
     vibrateAlert();
   }
 
-  function setView() {
+  function showTab(tab) {
+    const isShift = tab === "shift";
+    els.shiftPage.classList.toggle("hidden", !isShift);
+    els.profilePage.classList.toggle("hidden", isShift);
+    els.tabShift.classList.toggle("active", isShift);
+    els.tabProfile.classList.toggle("active", !isShift);
+    if (!isShift) renderCalendar();
+  }
+
+  function setShiftView() {
     const isIdle = state.status === "idle";
     const isActive = state.status === "active";
     const isDone = state.status === "done";
-
     els.idleView.classList.toggle("hidden", !isIdle);
     els.activeView.classList.toggle("hidden", !isActive);
     els.doneView.classList.toggle("hidden", !isDone);
   }
 
-  function renderBreaks(now) {
-    const completed = state.breaks.filter((b) => b.end != null);
-    els.breakList.innerHTML = "";
+  function updateGreeting() {
+    els.greetLine.textContent = state.name
+      ? `Hey ${state.name} · 9-hour day`
+      : "Your 9-hour day";
+  }
 
-    completed.forEach((b, i) => {
-      const li = document.createElement("li");
-      const actual = formatMS(b.end - b.start);
-      const planned = Math.round(b.plannedMs / 60000);
-      li.innerHTML = `<span>Break ${i + 1}</span><span class="when">${formatClock(b.start)} → ${formatClock(b.end)} · ${actual} <span class="muted">(planned ${planned}m)</span></span>`;
-      els.breakList.appendChild(li);
-    });
+  function renderCalendar() {
+    els.calTitle.textContent = `${MONTHS[viewMonth]} ${viewYear}`;
+    els.calGrid.innerHTML = "";
 
-    const onBreak = activeBreak();
-    els.emptyBreaks.classList.toggle("hidden", completed.length > 0 || onBreak);
-    els.breakLive.classList.toggle("hidden", !onBreak);
-    els.breakPicker.classList.toggle("hidden", !!onBreak);
-    els.breakRunningActions.classList.toggle("hidden", !onBreak);
+    const first = new Date(viewYear, viewMonth, 1);
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const startWeekday = first.getDay();
+    const today = new Date();
+    const todayKey = dateKey(today);
+    const trackingSince = state.trackingSince;
 
-    if (onBreak) {
-      const left = breakRemainingMs(onBreak, now);
-      if (left > 0) {
-        els.breakLive.textContent = `Break · ${formatMS(left)} left of ${Math.round(onBreak.plannedMs / 60000)}m`;
-        els.breakLive.classList.remove("over");
+    for (let i = 0; i < startWeekday; i++) {
+      const empty = document.createElement("div");
+      empty.className = "day-cell empty";
+      els.calGrid.appendChild(empty);
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const cellDate = new Date(viewYear, viewMonth, day);
+      const key = dateKey(cellDate);
+      const cell = document.createElement("div");
+      cell.className = "day-cell";
+
+      const cellStart = new Date(viewYear, viewMonth, day).setHours(0, 0, 0, 0);
+      const todayStart = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
+      ).getTime();
+      const isToday = key === todayKey;
+      const isFuture = cellStart > todayStart;
+      const present = !!state.attendance[key];
+      const tracked = trackingSince && key >= trackingSince && !isFuture;
+
+      if (isToday) cell.classList.add("today");
+
+      if (present) {
+        cell.classList.add("present");
+        cell.innerHTML = `<span class="sun" aria-hidden="true"></span><span class="day-num">${day}</span>`;
+        cell.title = "Came in";
+      } else if (tracked) {
+        cell.classList.add("missed");
+        cell.innerHTML = `<span class="water" aria-hidden="true"></span><span class="ship" aria-hidden="true">${SHIP_SVG}</span><span class="day-num">${day}</span>`;
+        cell.title = "Missed";
       } else {
-        els.breakLive.textContent = `Break over by ${formatMS(-left)}`;
-        els.breakLive.classList.add("over");
+        if (isFuture) cell.classList.add("future");
+        cell.innerHTML = `<span class="day-num">${day}</span>`;
       }
+
+      els.calGrid.appendChild(cell);
     }
   }
 
-  function maybeAlertBreak(now) {
-    const onBreak = activeBreak();
-    if (!onBreak) return;
-
-    const left = breakRemainingMs(onBreak, now);
-    // Last 5 minutes of this break (or at time-up if break is shorter than 5m)
-    const shouldWarn = left <= WARN_MS;
-    if (shouldWarn) fireBreakAlert({ breakItem: onBreak });
-  }
-
   function render() {
-    setView();
+    setShiftView();
+    updateGreeting();
     const now = Date.now();
 
     if (state.status === "active" && state.clockInAt) {
@@ -192,61 +264,54 @@
       const onBreak = activeBreak();
       const over = remaining <= 0;
 
-      els.clockedInAt.textContent = `In since ${formatClock(state.clockInAt)}`;
       els.leaveAt.textContent = `Leave by ${formatClock(leaveAt)}`;
       els.timeLeft.textContent = over ? "00:00:00" : formatHMS(remaining);
-      els.workedTime.textContent = formatHMS(worked);
-      els.breakUsed.textContent = formatHMS(usedBreak);
-
-      if (breakLeft >= 0) {
-        els.breakLeft.textContent = `${formatMS(breakLeft)} left`;
-        els.breakLeft.classList.remove("over");
-      } else {
-        els.breakLeft.textContent = `${formatMS(-breakLeft)} over`;
-        els.breakLeft.classList.add("over");
-      }
-
-      const pct = Math.min(100, (elapsed / SHIFT_MS) * 100);
-      els.dayProgress.style.width = `${pct}%`;
-
-      els.timeLeft.classList.remove("warning");
       els.timeLeft.classList.toggle("critical", over);
+      els.dayProgress.style.width = `${Math.min(100, (elapsed / SHIFT_MS) * 100)}%`;
+
+      const breakLeftLabel =
+        breakLeft >= 0
+          ? `${Math.ceil(breakLeft / 60000)}m left`
+          : `${Math.ceil(-breakLeft / 60000)}m over`;
+      els.summaryLine.textContent = `Worked ${formatHMS(worked)} · Break ${breakLeftLabel}`;
+
+      els.openBreakBtn.classList.toggle("hidden", !!onBreak || over);
+      els.onBreakBox.classList.toggle("hidden", !onBreak);
 
       els.statusPill.classList.remove("on-break", "ending");
       if (onBreak) {
         const left = breakRemainingMs(onBreak, now);
         if (left <= WARN_MS) {
-          els.statusPill.textContent =
-            left <= 0 ? "Break over" : "Break ending";
+          els.statusPill.textContent = left <= 0 ? "Break over" : "Break ending";
           els.statusPill.classList.add("ending");
         } else {
           els.statusPill.textContent = "On break";
           els.statusPill.classList.add("on-break");
         }
+        if (left > 0) {
+          els.breakLive.textContent = `${formatMS(left)} left`;
+          els.breakLive.classList.remove("over");
+        } else {
+          els.breakLive.textContent = `Over by ${formatMS(-left)}`;
+          els.breakLive.classList.add("over");
+        }
+        if (left <= WARN_MS) fireBreakAlert(onBreak);
       } else if (over) {
         els.statusPill.textContent = "Shift done";
         els.statusPill.classList.add("ending");
       } else {
         els.statusPill.textContent = "On shift";
       }
-
-      const chipsDisabled = over;
-      els.durationRow.querySelectorAll(".chip").forEach((chip) => {
-        chip.disabled = chipsDisabled;
-      });
-      els.customBreakBtn.disabled = chipsDisabled;
-      els.customMins.disabled = chipsDisabled;
-
-      renderBreaks(now);
-      maybeAlertBreak(now);
     }
 
     if (state.status === "done" && state.clockInAt && state.clockOutAt) {
       const total = state.clockOutAt - state.clockInAt;
       const usedBreak = breakUsedMs(state.clockOutAt);
       els.doneSummary.textContent = formatHMS(total);
-      els.doneDetail.textContent = `On site ${formatHMS(total)} · Break ${formatHMS(usedBreak)} · Worked ${formatHMS(total - usedBreak)}`;
+      els.doneDetail.textContent = `Break ${formatHMS(usedBreak)} · Worked ${formatHMS(total - usedBreak)}`;
     }
+
+    if (!els.profilePage.classList.contains("hidden")) renderCalendar();
   }
 
   function startTicker() {
@@ -255,25 +320,35 @@
   }
 
   function clockIn() {
+    markPresent();
     state = {
+      ...state,
       status: "active",
       clockInAt: Date.now(),
       clockOutAt: null,
       breaks: [],
     };
+    if (!state.trackingSince) state.trackingSince = dateKey(new Date());
     saveState();
     render();
     startTicker();
   }
 
   function clockOut() {
-    if (activeBreak()) {
-      activeBreak().end = Date.now();
-    }
+    if (activeBreak()) activeBreak().end = Date.now();
     state.status = "done";
     state.clockOutAt = Date.now();
     saveState();
     render();
+  }
+
+  function openBreakSheet() {
+    if (state.status !== "active" || activeBreak()) return;
+    els.breakSheet.classList.remove("hidden");
+  }
+
+  function closeBreakSheet() {
+    els.breakSheet.classList.add("hidden");
   }
 
   function startBreak(mins) {
@@ -286,7 +361,6 @@
     ) {
       return;
     }
-
     state.breaks.push({
       start: Date.now(),
       end: null,
@@ -294,6 +368,7 @@
       alertFired: false,
     });
     saveState();
+    closeBreakSheet();
     render();
   }
 
@@ -307,12 +382,10 @@
   }
 
   function resetDay() {
-    state = {
-      status: "idle",
-      clockInAt: null,
-      clockOutAt: null,
-      breaks: [],
-    };
+    state.status = "idle";
+    state.clockInAt = null;
+    state.clockOutAt = null;
+    state.breaks = [];
     saveState();
     render();
   }
@@ -325,24 +398,42 @@
   els.clockInBtn.addEventListener("click", clockIn);
   els.clockOutBtn.addEventListener("click", clockOut);
   els.newDayBtn.addEventListener("click", resetDay);
+  els.openBreakBtn.addEventListener("click", openBreakSheet);
+  els.cancelBreakBtn.addEventListener("click", closeBreakSheet);
   els.endBreakBtn.addEventListener("click", endBreak);
-  els.testAlertBtn.addEventListener("click", () => {
-    fireBreakAlert({ force: true });
-  });
   els.dismissAlertBtn.addEventListener("click", dismissAlert);
+  els.tabShift.addEventListener("click", () => showTab("shift"));
+  els.tabProfile.addEventListener("click", () => showTab("profile"));
 
-  els.durationRow.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-mins]");
-    if (!btn) return;
-    startBreak(btn.dataset.mins);
+  els.breakSheet.addEventListener("click", (e) => {
+    if (e.target === els.breakSheet) closeBreakSheet();
+    const opt = e.target.closest("[data-mins]");
+    if (opt) startBreak(opt.dataset.mins);
   });
 
-  els.customBreakBtn.addEventListener("click", () => {
-    startBreak(els.customMins.value);
+  els.nameInput.value = state.name || "";
+  els.nameInput.addEventListener("input", () => {
+    state.name = els.nameInput.value.trim();
+    saveState();
+    updateGreeting();
   });
 
-  els.customMins.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") startBreak(els.customMins.value);
+  els.prevMonthBtn.addEventListener("click", () => {
+    viewMonth -= 1;
+    if (viewMonth < 0) {
+      viewMonth = 11;
+      viewYear -= 1;
+    }
+    renderCalendar();
+  });
+
+  els.nextMonthBtn.addEventListener("click", () => {
+    viewMonth += 1;
+    if (viewMonth > 11) {
+      viewMonth = 0;
+      viewYear += 1;
+    }
+    renderCalendar();
   });
 
   document.addEventListener("visibilitychange", () => {

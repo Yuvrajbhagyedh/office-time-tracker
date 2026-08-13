@@ -6,9 +6,12 @@
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#0f1c1a" />
+    <meta name="theme-color" content="#ffffff" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
     <title>Shift Desk</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -26,110 +29,140 @@
       <div class="grain"></div>
     </div>
 
-    <main class="shell">
-      <header class="brand-block">
-        <p class="brand">Shift Desk</p>
-        <p class="tagline">9-hour day · 1-hour break · your pace</p>
-      </header>
+    <div class="app">
+      <main class="shell" id="shiftPage">
+        <header class="brand-block">
+          <p class="brand">Shift Desk</p>
+          <p class="tagline" id="greetLine">Your 9-hour day</p>
+        </header>
 
-      <section class="hero-clock" id="idleView">
-        <p class="hero-label">Ready when you walk in</p>
-        <button type="button" class="btn btn-primary btn-xl" id="clockInBtn">
-          Clock in
-        </button>
-        <p class="hint">Starts your 9-hour shift. Break time is tracked separately in chunks.</p>
-      </section>
+        <section class="hero-clock" id="idleView">
+          <p class="hero-label">Walk in? Tap once.</p>
+          <button type="button" class="btn btn-primary btn-xl" id="clockInBtn">
+            Clock in
+          </button>
+        </section>
 
-      <section class="active-shift hidden" id="activeView" aria-live="polite">
-        <div class="status-row">
-          <span class="pill" id="statusPill">On shift</span>
-          <span class="mono muted" id="clockedInAt">—</span>
-        </div>
-
-        <div class="countdown-block">
-          <p class="section-label">Time left to leave</p>
-          <p class="mega-time" id="timeLeft">09:00:00</p>
-          <p class="leave-at mono" id="leaveAt">Leave by —</p>
-          <div class="progress-track" aria-hidden="true">
-            <div class="progress-fill" id="dayProgress"></div>
+        <section class="active-shift hidden" id="activeView" aria-live="polite">
+          <div class="status-row">
+            <span class="pill" id="statusPill">On shift</span>
           </div>
-        </div>
 
-        <div class="metrics">
-          <div class="metric">
-            <p class="metric-label">Worked</p>
-            <p class="metric-value mono" id="workedTime">00:00:00</p>
-          </div>
-          <div class="metric">
-            <p class="metric-label">Break used</p>
-            <p class="metric-value mono" id="breakUsed">00:00:00</p>
-            <p class="metric-sub mono" id="breakLeft">60:00 left</p>
-          </div>
-        </div>
-
-        <div class="break-panel" id="breakPanel">
-          <div id="breakPicker">
-            <p class="section-label">Start a break</p>
-            <div class="duration-row" id="durationRow">
-              <button type="button" class="chip" data-mins="10">10m</button>
-              <button type="button" class="chip" data-mins="15">15m</button>
-              <button type="button" class="chip" data-mins="20">20m</button>
-              <button type="button" class="chip" data-mins="30">30m</button>
-              <button type="button" class="chip" data-mins="40">40m</button>
-              <button type="button" class="chip" data-mins="60">60m</button>
+          <div class="countdown-block">
+            <p class="mega-time" id="timeLeft">09:00:00</p>
+            <p class="leave-at mono" id="leaveAt">Leave by —</p>
+            <div class="progress-track" aria-hidden="true">
+              <div class="progress-fill" id="dayProgress"></div>
             </div>
-            <div class="custom-duration">
-              <input
-                type="number"
-                id="customMins"
-                min="1"
-                max="120"
-                placeholder="mins"
-                inputmode="numeric"
-                aria-label="Custom break minutes"
-              />
-              <button type="button" class="btn btn-break" id="customBreakBtn">
-                Start
+          </div>
+
+          <p class="summary-line mono" id="summaryLine">
+            Worked 00:00 · Break 60m left
+          </p>
+
+          <div class="break-panel" id="breakPanel">
+            <button type="button" class="btn btn-break btn-xl" id="openBreakBtn">
+              Take a break
+            </button>
+
+            <div class="on-break-box hidden" id="onBreakBox">
+              <p class="break-live mono" id="breakLive">00:00 left</p>
+              <button type="button" class="btn btn-end-break btn-xl" id="endBreakBtn">
+                End break
               </button>
             </div>
           </div>
 
-          <div class="break-actions hidden" id="breakRunningActions">
-            <button type="button" class="btn btn-end-break" id="endBreakBtn">
-              End break
-            </button>
-          </div>
-          <p class="break-live mono hidden" id="breakLive">Break · 00:00 left</p>
-
-          <ul class="break-list" id="breakList"></ul>
-          <p class="empty-breaks muted" id="emptyBreaks">No breaks yet — pick a length when you step out.</p>
-        </div>
-
-        <div class="footer-actions">
-          <button type="button" class="btn btn-ghost" id="testAlertBtn">
-            Test alert
-          </button>
-          <button type="button" class="btn btn-danger" id="clockOutBtn">
+          <button type="button" class="btn btn-danger btn-soft" id="clockOutBtn">
             Clock out
           </button>
-        </div>
-      </section>
+        </section>
 
-      <section class="done-view hidden" id="doneView">
-        <p class="hero-label">Shift complete</p>
-        <p class="mega-time done-time" id="doneSummary">—</p>
-        <p class="hint" id="doneDetail">Nice work. See you tomorrow.</p>
-        <button type="button" class="btn btn-primary" id="newDayBtn">
-          Start a new day
+        <section class="done-view hidden" id="doneView">
+          <p class="hero-label">Done for today</p>
+          <p class="mega-time" id="doneSummary">—</p>
+          <p class="hint" id="doneDetail">Nice work.</p>
+          <button type="button" class="btn btn-primary btn-xl" id="newDayBtn">
+            New day
+          </button>
+        </section>
+      </main>
+
+      <main class="shell profile-page hidden" id="profilePage">
+        <header class="brand-block">
+          <p class="brand">Profile</p>
+          <p class="tagline">Attendance calendar</p>
+        </header>
+
+        <label class="name-field">
+          <span>Your name</span>
+          <input
+            type="text"
+            id="nameInput"
+            maxlength="40"
+            placeholder="Type your name"
+            autocomplete="name"
+          />
+        </label>
+
+        <div class="legend">
+          <span class="legend-item"
+            ><span class="mini-sun" aria-hidden="true"></span> Came in</span
+          >
+          <span class="legend-item"
+            ><span class="mini-sink" aria-hidden="true"></span> Missed</span
+          >
+        </div>
+
+        <div class="cal-nav">
+          <button type="button" class="btn btn-ghost btn-icon" id="prevMonthBtn" aria-label="Previous month">
+            ‹
+          </button>
+          <p class="cal-title" id="calTitle">August 2026</p>
+          <button type="button" class="btn btn-ghost btn-icon" id="nextMonthBtn" aria-label="Next month">
+            ›
+          </button>
+        </div>
+
+        <div class="cal-weekdays" aria-hidden="true">
+          <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span
+          ><span>F</span><span>S</span>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+
+        <p class="hint cal-hint">
+          Sun = you clocked in. Ship sunk in water = you didn’t show that day.
+        </p>
+      </main>
+
+      <nav class="tabbar" aria-label="Main">
+        <button type="button" class="tab active" data-tab="shift" id="tabShift">
+          Shift
         </button>
-      </section>
-    </main>
+        <button type="button" class="tab" data-tab="profile" id="tabProfile">
+          Profile
+        </button>
+      </nav>
+    </div>
+
+    <div class="sheet-overlay hidden" id="breakSheet" role="dialog" aria-modal="true">
+      <div class="sheet">
+        <p class="sheet-title">How long?</p>
+        <div class="sheet-options">
+          <button type="button" class="sheet-opt" data-mins="10">10 min</button>
+          <button type="button" class="sheet-opt" data-mins="30">30 min</button>
+          <button type="button" class="sheet-opt" data-mins="45">45 min</button>
+          <button type="button" class="sheet-opt" data-mins="60">1 hour</button>
+        </div>
+        <button type="button" class="btn btn-ghost" id="cancelBreakBtn">Cancel</button>
+      </div>
+    </div>
 
     <div class="alert-overlay hidden" id="alertOverlay" role="alertdialog" aria-modal="true">
       <div class="alert-card">
         <p class="alert-kicker">Break ending</p>
         <p class="alert-title">Times up, my boy</p>
-        <p class="alert-body" id="alertBody">Go now — wrap this break and get back.</p>
+        <p class="alert-body">Go now — wrap this break and get back.</p>
         <button type="button" class="btn btn-primary" id="dismissAlertBtn">
           Got it
         </button>
