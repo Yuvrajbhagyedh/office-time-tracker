@@ -35,6 +35,9 @@ body {
   background: var(--bg-deep);
   min-height: 100dvh;
   overflow-x: hidden;
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem 0;
 }
 
 .atmosphere {
@@ -93,13 +96,18 @@ body {
   position: relative;
   z-index: 1;
   width: min(560px, calc(100% - 2rem));
-  margin: 0 auto;
-  padding: 2.25rem 0 3.5rem;
+  margin: auto;
+  padding: 2.5rem 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .brand-block {
   margin-bottom: 2.5rem;
   animation: rise 0.7s ease both;
+  width: 100%;
 }
 
 .brand {
@@ -122,6 +130,10 @@ body {
 .active-shift,
 .done-view {
   animation: rise 0.75s ease both;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .hero-label {
@@ -131,7 +143,7 @@ body {
 }
 
 .hint {
-  margin: 1.25rem 0 0;
+  margin: 1.25rem auto 0;
   color: var(--muted);
   font-size: 0.92rem;
   line-height: 1.45;
@@ -141,9 +153,11 @@ body {
 .status-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
   margin-bottom: 1.75rem;
+  width: 100%;
 }
 
 .pill {
@@ -173,6 +187,7 @@ body {
 
 .countdown-block {
   margin-bottom: 1.75rem;
+  width: 100%;
 }
 
 .section-label,
@@ -230,6 +245,7 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
   margin-bottom: 1.5rem;
+  width: 100%;
 }
 
 .metric {
@@ -256,12 +272,17 @@ body {
 .break-panel {
   padding: 1.25rem 0 0.5rem;
   border-top: 1px solid var(--line);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .break-actions {
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
+  justify-content: center;
 }
 
 .duration-row {
@@ -269,6 +290,7 @@ body {
   flex-wrap: wrap;
   gap: 0.55rem;
   margin: 0.65rem 0 0.85rem;
+  justify-content: center;
 }
 
 .chip {
@@ -302,6 +324,7 @@ body {
   display: flex;
   gap: 0.6rem;
   align-items: center;
+  justify-content: center;
   margin-bottom: 0.35rem;
 }
 
@@ -341,6 +364,7 @@ body {
   padding: 0;
   display: grid;
   gap: 0.55rem;
+  width: 100%;
 }
 
 .break-list li {
@@ -350,6 +374,7 @@ body {
   padding: 0.65rem 0;
   border-bottom: 1px solid rgba(180, 210, 198, 0.08);
   font-size: 0.9rem;
+  text-align: left;
 }
 
 .break-list .when {
@@ -363,12 +388,14 @@ body {
 
 .footer-actions {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
+  flex-wrap: wrap;
   gap: 1rem;
   margin-top: 2rem;
   padding-top: 1.25rem;
   border-top: 1px solid var(--line);
+  width: 100%;
 }
 
 .btn {
@@ -476,7 +503,7 @@ body {
   background:
     linear-gradient(180deg, rgba(48, 28, 22, 0.95), rgba(22, 18, 16, 0.96));
   box-shadow: var(--shadow);
-  text-align: left;
+  text-align: center;
   animation: pop 0.35s cubic-bezier(0.2, 0.9, 0.25, 1);
 }
 
@@ -546,10 +573,11 @@ body {
   .shell {
     width: min(560px, calc(100% - 1.5rem));
     padding-top: 1.75rem;
+    padding-bottom: 1.75rem;
   }
 
   .footer-actions {
-    flex-direction: column-reverse;
+    flex-direction: column;
     align-items: stretch;
   }
 
