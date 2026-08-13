@@ -89,6 +89,7 @@
   if (state.trackingSince === undefined) state.trackingSince = null;
 
   let tickTimer = null;
+  let vibrateTimer = null;
   let viewYear = nowInit.getFullYear();
   let viewMonth = nowInit.getMonth();
 
@@ -159,9 +160,25 @@
     if (!state.trackingSince) state.trackingSince = key;
   }
 
-  function vibrateAlert() {
+  function startVibrateLoop() {
+    stopVibrateLoop();
     if (!navigator.vibrate) return;
-    navigator.vibrate([300, 150, 300, 150, 300, 150, 450]);
+
+    const pulse = () => {
+      navigator.vibrate([280, 120, 280, 120, 280, 120, 500]);
+    };
+
+    pulse();
+    // Keep pulsing until the user turns it off
+    vibrateTimer = setInterval(pulse, 1900);
+  }
+
+  function stopVibrateLoop() {
+    if (vibrateTimer) {
+      clearInterval(vibrateTimer);
+      vibrateTimer = null;
+    }
+    if (navigator.vibrate) navigator.vibrate(0);
   }
 
   function fireBreakAlert(breakItem) {
@@ -169,7 +186,7 @@
     breakItem.alertFired = true;
     saveState();
     els.alertOverlay.classList.remove("hidden");
-    vibrateAlert();
+    startVibrateLoop();
   }
 
   function showTab(tab) {
@@ -392,7 +409,7 @@
 
   function dismissAlert() {
     els.alertOverlay.classList.add("hidden");
-    if (navigator.vibrate) navigator.vibrate(0);
+    stopVibrateLoop();
   }
 
   els.clockInBtn.addEventListener("click", clockIn);
