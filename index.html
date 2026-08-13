@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0f1c1a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Shift Desk</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="atmosphere" aria-hidden="true">
+      <div class="glow glow-a"></div>
+      <div class="glow glow-b"></div>
+      <div class="grain"></div>
+    </div>
+
+    <main class="shell">
+      <header class="brand-block">
+        <p class="brand">Shift Desk</p>
+        <p class="tagline">9-hour day · 1-hour break · your pace</p>
+      </header>
+
+      <section class="hero-clock" id="idleView">
+        <p class="hero-label">Ready when you walk in</p>
+        <button type="button" class="btn btn-primary btn-xl" id="clockInBtn">
+          Clock in
+        </button>
+        <p class="hint">Starts your 9-hour shift. Break time is tracked separately in chunks.</p>
+      </section>
+
+      <section class="active-shift hidden" id="activeView" aria-live="polite">
+        <div class="status-row">
+          <span class="pill" id="statusPill">On shift</span>
+          <span class="mono muted" id="clockedInAt">—</span>
+        </div>
+
+        <div class="countdown-block">
+          <p class="section-label">Time left to leave</p>
+          <p class="mega-time" id="timeLeft">09:00:00</p>
+          <p class="leave-at mono" id="leaveAt">Leave by —</p>
+          <div class="progress-track" aria-hidden="true">
+            <div class="progress-fill" id="dayProgress"></div>
+          </div>
+        </div>
+
+        <div class="metrics">
+          <div class="metric">
+            <p class="metric-label">Worked</p>
+            <p class="metric-value mono" id="workedTime">00:00:00</p>
+          </div>
+          <div class="metric">
+            <p class="metric-label">Break used</p>
+            <p class="metric-value mono" id="breakUsed">00:00:00</p>
+            <p class="metric-sub mono" id="breakLeft">60:00 left</p>
+          </div>
+        </div>
+
+        <div class="break-panel" id="breakPanel">
+          <div id="breakPicker">
+            <p class="section-label">Start a break</p>
+            <div class="duration-row" id="durationRow">
+              <button type="button" class="chip" data-mins="10">10m</button>
+              <button type="button" class="chip" data-mins="15">15m</button>
+              <button type="button" class="chip" data-mins="20">20m</button>
+              <button type="button" class="chip" data-mins="30">30m</button>
+              <button type="button" class="chip" data-mins="40">40m</button>
+              <button type="button" class="chip" data-mins="60">60m</button>
+            </div>
+            <div class="custom-duration">
+              <input
+                type="number"
+                id="customMins"
+                min="1"
+                max="120"
+                placeholder="mins"
+                inputmode="numeric"
+                aria-label="Custom break minutes"
+              />
+              <button type="button" class="btn btn-break" id="customBreakBtn">
+                Start
+              </button>
+            </div>
+          </div>
+
+          <div class="break-actions hidden" id="breakRunningActions">
+            <button type="button" class="btn btn-end-break" id="endBreakBtn">
+              End break
+            </button>
+          </div>
+          <p class="break-live mono hidden" id="breakLive">Break · 00:00 left</p>
+
+          <ul class="break-list" id="breakList"></ul>
+          <p class="empty-breaks muted" id="emptyBreaks">No breaks yet — pick a length when you step out.</p>
+        </div>
+
+        <div class="footer-actions">
+          <button type="button" class="btn btn-ghost" id="testAlertBtn">
+            Test alert
+          </button>
+          <button type="button" class="btn btn-danger" id="clockOutBtn">
+            Clock out
+          </button>
+        </div>
+      </section>
+
+      <section class="done-view hidden" id="doneView">
+        <p class="hero-label">Shift complete</p>
+        <p class="mega-time done-time" id="doneSummary">—</p>
+        <p class="hint" id="doneDetail">Nice work. See you tomorrow.</p>
+        <button type="button" class="btn btn-primary" id="newDayBtn">
+          Start a new day
+        </button>
+      </section>
+    </main>
+
+    <div class="alert-overlay hidden" id="alertOverlay" role="alertdialog" aria-modal="true">
+      <div class="alert-card">
+        <p class="alert-kicker">Break ending</p>
+        <p class="alert-title">Times up, my boy</p>
+        <p class="alert-body" id="alertBody">Go now — wrap this break and get back.</p>
+        <button type="button" class="btn btn-primary" id="dismissAlertBtn">
+          Got it
+        </button>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
