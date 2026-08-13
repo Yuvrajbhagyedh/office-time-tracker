@@ -1,7 +1,8 @@
 (() => {
   const SHIFT_MS = 9 * 60 * 60 * 1000;
   const BREAK_ALLOWANCE_MS = 60 * 60 * 1000;
-  const WARN_MS = 5 * 60 * 1000;
+  const WARN_5_MS = 5 * 60 * 1000;
+  const WARN_1_MS = 1 * 60 * 1000;
   const STORAGE_KEY = "shift-desk-v3";
 
   const MONTHS = [
@@ -46,6 +47,9 @@
     cancelBreakBtn: document.getElementById("cancelBreakBtn"),
     dismissAlertBtn: document.getElementById("dismissAlertBtn"),
     alertOverlay: document.getElementById("alertOverlay"),
+    alertKicker: document.getElementById("alertKicker"),
+    alertTitle: document.getElementById("alertTitle"),
+    alertBody: document.getElementById("alertBody"),
     statusPill: document.getElementById("statusPill"),
     timeLeft: document.getElementById("timeLeft"),
     leaveAt: document.getElementById("leaveAt"),
@@ -68,7 +72,13 @@
    *  status: 'idle' | 'active' | 'done',
    *  clockInAt: number | null,
    *  clockOutAt: number | null,
-   *  breaks: Array<{ start: number, end: number | null, plannedMs: number, alertFired: boolean }>,
+   *  breaks: Array<{
+   *    start: number,
+   *    end: number | null,
+   *    plannedMs: number,
+   *    alertAt5: boolean,
+   *    alertAt1: boolean
+   *  }>,
    *  name: string,
    *  attendance: Record<string, true>,
    *  trackingSince: string | null,
@@ -181,12 +191,33 @@
     if (navigator.vibrate) navigator.vibrate(0);
   }
 
-  function fireBreakAlert(breakItem) {
-    if (!breakItem || breakItem.alertFired) return;
-    breakItem.alertFired = true;
+  function fireBreakAlert(breakItem, kind) {
+    if (!breakItem) return;
+    if (kind === 5 && breakItem.alertAt5) return;
+    if (kind === 1 && breakItem.alertAt1) return;
+
+    if (kind === 5) breakItem.alertAt5 = true;
+    if (kind === 1) breakItem.alertAt1 = true;
     saveState();
+
+    if (kind === 5) {
+      els.alertKicker.textContent = "5 minutes left";
+      els.alertTitle.textContent = "Wrap up soon";
+      els.alertBody.textContent =
+        "Break ends in 5 minutes — finish up and get ready.";
+    } else {
+      els.alertKicker.textContent = "1 minute left";
+      els.alertTitle.textContent = "Times up, my boy";
+      els.alertBody.textContent = "Go now — last 1 minute of this break.";
+    }
+
     els.alertOverlay.classList.remove("hidden");
     startVibrateLoop();
+  }
+
+  function checkBreakAlerts(breakItem, left) {
+    if (left <= WARN_5_MS) fireBreakAlert(breakItem, 5);
+    if (left <= WARN_1_MS) fireBreakAlert(breakItem, 1);
   }
 
   function showTab(tab) {
@@ -298,8 +329,11 @@
       els.statusPill.classList.remove("on-break", "ending");
       if (onBreak) {
         const left = breakRemainingMs(onBreak, now);
-        if (left <= WARN_MS) {
-          els.statusPill.textContent = left <= 0 ? "Break over" : "Break ending";
+        if (left <= WARN_1_MS) {
+          els.statusPill.textContent = left <= 0 ? "Break over" : "1 min left";
+          els.statusPill.classList.add("ending");
+        } else if (left <= WARN_5_MS) {
+          els.statusPill.textContent = "5 min left";
           els.statusPill.classList.add("ending");
         } else {
           els.statusPill.textContent = "On break";
@@ -312,7 +346,7 @@
           els.breakLive.textContent = `Over by ${formatMS(-left)}`;
           els.breakLive.classList.add("over");
         }
-        if (left <= WARN_MS) fireBreakAlert(onBreak);
+        checkBreakAlerts(onBreak, left);
       } else if (over) {
         els.statusPill.textContent = "Shift done";
         els.statusPill.classList.add("ending");
@@ -382,7 +416,8 @@
       start: Date.now(),
       end: null,
       plannedMs: Math.round(minutes) * 60 * 1000,
-      alertFired: false,
+      alertAt5: false,
+      alertAt1: false,
     });
     saveState();
     closeBreakSheet();
