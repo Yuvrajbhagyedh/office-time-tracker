@@ -215,6 +215,13 @@
     if (navigator.vibrate) navigator.vibrate(0);
   }
 
+  // Analytics: push app events to GTM's dataLayer. Only counts and labels —
+  // never the user's name or anything they type.
+  function track(event, params = {}) {
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({ event, ...params });
+  }
+
   function fireBreakAlert(breakItem, kind) {
     if (!breakItem) return;
     if (kind === 5 && breakItem.alertAt5) return;
@@ -237,6 +244,7 @@
 
     els.alertOverlay.classList.remove("hidden");
     startVibrateLoop();
+    track("break_alert_shown", { minutes_left: kind });
   }
 
   function checkBreakAlerts(breakItem, left) {
@@ -246,6 +254,8 @@
 
   function showTab(tab) {
     const isShift = tab === "shift";
+    const wasShift = !els.shiftPage.classList.contains("hidden");
+    if (isShift !== wasShift) track("tab_view", { tab_name: tab });
     els.shiftPage.classList.toggle("hidden", !isShift);
     els.profilePage.classList.toggle("hidden", isShift);
     els.tabShift.classList.toggle("active", isShift);
@@ -408,19 +418,29 @@
     saveState();
     render();
     startTicker();
+    track("shift_start", { shift_hours: state.shiftHours });
   }
 
   function clockOut() {
+    if (state.status !== "active") return;
+    const endedDuringBreak = Boolean(activeBreak());
     if (activeBreak()) activeBreak().end = Date.now();
     state.status = "done";
     state.clockOutAt = Date.now();
     saveState();
     render();
+    track("shift_end", {
+      worked_minutes: Math.round((state.clockOutAt - state.clockInAt) / 60000),
+      break_minutes: Math.round(breakUsedMs(state.clockOutAt) / 60000),
+      break_count: state.breaks.length,
+      ended_during_break: endedDuringBreak,
+    });
   }
 
   function openBreakSheet() {
     if (state.status !== "active" || activeBreak()) return;
     els.breakSheet.classList.remove("hidden");
+    track("break_sheet_open");
   }
 
   function closeBreakSheet() {
@@ -447,6 +467,10 @@
     saveState();
     closeBreakSheet();
     render();
+    track("break_start", {
+      break_planned_minutes: Math.round(minutes),
+      break_number: state.breaks.length,
+    });
   }
 
   function endBreak() {
@@ -456,6 +480,10 @@
     saveState();
     dismissAlert();
     render();
+    track("break_end", {
+      break_actual_minutes: Math.round((current.end - current.start) / 60000),
+      break_planned_minutes: Math.round(current.plannedMs / 60000),
+    });
   }
 
   function resetDay() {
@@ -465,6 +493,7 @@
     state.breaks = [];
     saveState();
     render();
+    track("new_day");
   }
 
   function dismissAlert() {
@@ -476,9 +505,15 @@
   els.clockOutBtn.addEventListener("click", clockOut);
   els.newDayBtn.addEventListener("click", resetDay);
   els.openBreakBtn.addEventListener("click", openBreakSheet);
-  els.cancelBreakBtn.addEventListener("click", closeBreakSheet);
+  els.cancelBreakBtn.addEventListener("click", () => {
+    closeBreakSheet();
+    track("break_cancel");
+  });
   els.endBreakBtn.addEventListener("click", endBreak);
-  els.dismissAlertBtn.addEventListener("click", dismissAlert);
+  els.dismissAlertBtn.addEventListener("click", () => {
+    dismissAlert();
+    track("break_alert_dismiss");
+  });
   els.tabShift.addEventListener("click", () => showTab("shift"));
   els.tabProfile.addEventListener("click", () => showTab("profile"));
 
@@ -510,6 +545,7 @@
     saveState();
     updateGreeting();
     render();
+    track("settings_change", { setting_name: "shift_hours", setting_value: hours });
   });
 
   els.breakMinsInput.addEventListener("change", () => {
@@ -519,6 +555,7 @@
     els.breakMinsInput.value = String(mins);
     saveState();
     render();
+    track("settings_change", { setting_name: "break_minutes", setting_value: mins });
   });
 
   els.prevMonthBtn.addEventListener("click", () => {
@@ -528,6 +565,7 @@
       viewYear -= 1;
     }
     renderCalendar();
+    track("calendar_navigate", { direction: "previous" });
   });
 
   els.nextMonthBtn.addEventListener("click", () => {
@@ -537,6 +575,7 @@
       viewYear += 1;
     }
     renderCalendar();
+    track("calendar_navigate", { direction: "next" });
   });
 
   document.addEventListener("visibilitychange", () => {
